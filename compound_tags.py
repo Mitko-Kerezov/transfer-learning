@@ -3,9 +3,6 @@ from bs4 import BeautifulSoup
 import csv
 import nltk
 
-nltk.data.path.clear()
-nltk.data.path.append("G:\\nltk_data")
-
 class Document(object):
     def __init__(self, _id, title, content, tags):
         self._id = id
@@ -23,7 +20,7 @@ def tokenize(text):
             continue
         yield LEMATIZER.lemmatize(token)
 
-def calc_compaund_tags(path):
+def calc_compound_tags(path):
     reader = csv.DictReader(open(path, encoding="utf-8"))
 
     all_documetnts = []
@@ -41,4 +38,4 @@ def calc_compaund_tags(path):
     print("%s %f" % (path, res))
 
 for csv_name in ['biology', 'cooking', 'crypto', 'diy', 'robotics', 'travel']:
-    calc_compaund_tags(join("data", csv_name + ".csv"))
+    calc_compound_tags(join("data", csv_name + ".csv"))
