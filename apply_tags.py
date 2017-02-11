@@ -1,5 +1,4 @@
-""" abs """
-from json import dump, loads, JSONEncoder, JSONDecoder
+""" Sample docstring """
 import pickle
 import csv
 import nltk
@@ -13,8 +12,6 @@ from sklearn import datasets
 from sklearn import feature_extraction
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-nltk.data.path.clear()
-nltk.data.path.append("G:\\nltk_data")
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 class Document(object):
@@ -34,12 +31,6 @@ def tokenize(text):
             continue
         yield LEMATIZER.lemmatize(token)
 
-class PythonObjectEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, (list, dict, str, int, float, bool, type(None))):
-            return JSONEncoder.default(self, obj)
-        return {'_python_object': pickle.dumps(obj)}
-
 def as_python_object(dct):
     if '_python_object' in dct:
         return pickle.loads(str(dct['_python_object']))
@@ -49,29 +40,29 @@ START_INDEX = 0
 def average_tfidf(path):
     reader = csv.DictReader(open(path, encoding="utf-8"))
 
-    allDocumetnts = []
+    allDocuments = []
     for line in reader:
-        allDocumetnts.append(Document(line["id"], line["title"], BeautifulSoup(line["content"], "lxml").get_text()))
+        allDocuments.append(Document(line["id"], line["title"], BeautifulSoup(line["content"], "lxml").get_text()))
 
     vectorizer = TfidfVectorizer(tokenizer=tokenize, decode_error='ignore')
 
-    tdm = vectorizer.fit_transform (map( lambda i: "%s %s" % (i.Title, i.Content) ,allDocumetnts))
+    tdm = vectorizer.fit_transform (map( lambda i: "%s %s" % (i.Title, i.Content) ,allDocuments))
     features = vectorizer.get_feature_names()
     print("TDM contains %i terms and %i documents." % (len(features), tdm.shape[0]))
     physics_tags = defaultdict(set)
     with open(join("charts", "first-attempt.csv"), 'a') as f:
         if START_INDEX == 0:
             f.write("id,tags\n")
-        for doc in allDocumetnts:
+        for doc in allDocuments:
             if int(doc.Id) <= START_INDEX:
                 continue
             for word in tokenize(doc.Content):
                 if word in features:
-                    if float(tdm[allDocumetnts.index(doc), features.index(word)]) > .3:
+                    if float(tdm[allDocuments.index(doc), features.index(word)]) > .3:
                         physics_tags[doc.Id].add(word)
             for word in tokenize(doc.Title):
                 if word in features:
-                    if float(tdm[allDocumetnts.index(doc), features.index(word)]) > .3:
+                    if float(tdm[allDocuments.index(doc), features.index(word)]) > .3:
                         physics_tags[doc.Id].add(word)
             f.write("%s,%s\n" % (doc.Id, " ".join(list(map(lambda t: str(str(t).encode(sys.stdout.encoding,errors="replace"))[2:][:-1], physics_tags[doc.Id])))))
 

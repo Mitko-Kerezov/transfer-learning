@@ -1,4 +1,3 @@
-from json import dump, loads, JSONEncoder, JSONDecoder
 import pickle
 import csv
 import nltk
@@ -15,8 +14,6 @@ from sklearn import datasets
 from sklearn import feature_extraction
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-nltk.data.path.clear()
-nltk.data.path.append("G:\\nltk_data")
 flatten = lambda l: [item for sublist in l for item in sublist]
 get_lemma_names = lambda y: y.lemma_names()
 get_hyponyms = lambda x: x.hyponyms()
@@ -45,12 +42,6 @@ def tokenize(text):
             token = match.group()
         yield LEMATIZER.lemmatize(token)
 
-class PythonObjectEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, (list, dict, str, int, float, bool, type(None))):
-            return JSONEncoder.default(self, obj)
-        return {'_python_object': pickle.dumps(obj)}
-
 def as_python_object(dct):
     if '_python_object' in dct:
         return pickle.loads(str(dct['_python_object']))
@@ -68,42 +59,42 @@ MIN_TFIDF_VALUE = .3
 def average_tfidf(path):
     reader = csv.DictReader(open(path, encoding="utf-8"))
 
-    allDocumetnts = []
+    allDocuments = []
     for line in reader:
-        allDocumetnts.append(Document(line["id"], line["title"], BeautifulSoup(line["content"], "lxml").get_text()))
+        allDocuments.append(Document(line["id"], line["title"], BeautifulSoup(line["content"], "lxml").get_text()))
 
     vectorizer = TfidfVectorizer(tokenizer=tokenize, decode_error='ignore')
 
-    tdm = vectorizer.fit_transform(map(lambda i: "%s %s" %(i.Title, i.Content), allDocumetnts))
+    tdm = vectorizer.fit_transform(map(lambda i: "%s %s" %(i.Title, i.Content), allDocuments))
     features = vectorizer.get_feature_names()
     print("TDM contains %i terms and %i documents." % (len(features), tdm.shape[0]))
     physics_tags = defaultdict(set)
-    with open(join("charts","hypo-and-hypernyms-attempt.csv"), 'a') as f:
+    with open(join("charts", "hypo-and-hypernyms-attempt.csv"), 'a') as f:
         if START_INDEX == 0:
             f.write("id,tags\n")
-        for doc in allDocumetnts:
+        for doc in allDocuments:
             if int(doc.Id) <= START_INDEX:
                 continue
             for word_pair in filter(filer_nouns, pos_tag(list(tokenize(doc.Content)))):
                 word = word_pair[0]
                 if word in features:
-                    if float(tdm[allDocumetnts.index(doc), features.index(word)]) > MIN_TFIDF_VALUE:
+                    if float(tdm[allDocuments.index(doc), features.index(word)]) > MIN_TFIDF_VALUE:
                         physics_tags[doc.Id].add(word)
                     else:
-                        for w in filter(lambda w: tdm[allDocumetnts.index(doc), features.index(w)] > MIN_TFIDF_VALUE,
+                        for w in filter(lambda w: tdm[allDocuments.index(doc), features.index(w)] > MIN_TFIDF_VALUE,
                                         filter(lambda w: w in features, flat_list_map(get_lemma_names, flat_list_map(get_hypo_and_hypernyms, wn.synsets(word))))):
                             physics_tags[doc.Id].add(w)
 
             for word_pair in filter(filer_nouns, pos_tag(list(tokenize(doc.Title)))):
                 word = word_pair[0]
                 if word in features:
-                    if float(tdm[allDocumetnts.index(doc), features.index(word)]) > MIN_TFIDF_VALUE:
+                    if float(tdm[allDocuments.index(doc), features.index(word)]) > MIN_TFIDF_VALUE:
                         physics_tags[doc.Id].add(word)
                     else:
-                        for w in filter(lambda w: tdm[allDocumetnts.index(doc), features.index(w)] > MIN_TFIDF_VALUE,
+                        for w in filter(lambda w: tdm[allDocuments.index(doc), features.index(w)] > MIN_TFIDF_VALUE,
                                         filter(lambda w: w in features, flat_list_map(get_lemma_names, flat_list_map(get_hypo_and_hypernyms, wn.synsets(word))))):
                             physics_tags[doc.Id].add(w)
             f.write("%s,%s\n" % (doc.Id, " ".join(list(map(lambda t: str(str(t).encode(sys.stdout.encoding,errors="replace"))[2:][:-1], physics_tags[doc.Id])))))
 
-for csv_name in ['scratch']:
+for csv_name in ['biology']:
     average_tfidf(join("data", csv_name + ".csv"))
